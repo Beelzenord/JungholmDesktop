@@ -45,7 +45,8 @@
             <StackPanel Spacing="5">
                 <TextBlock Text="Password" FontWeight="SemiBold"/>
                 <TextBox Text="{Binding Password}" 
-                         PasswordChar="●"
+                         PasswordChar="·"
+                         FontSize="14"
                          Watermark="Enter your password"
                          IsEnabled="{Binding !IsLoading}"/>
             </StackPanel>
