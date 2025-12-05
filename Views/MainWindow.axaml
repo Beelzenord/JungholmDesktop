@@ -1,6 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:JungholmInstrumentsDesktop.ViewModels"
+        xmlns:models="using:JungholmInstrumentsDesktop.Models"
+        xmlns:si="clr-namespace:SatialInterfaces.Controls.Calendar;assembly=CalendarControl"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
@@ -20,11 +22,16 @@
     <Grid RowDefinitions="Auto,*" Margin="20">
         <!-- Header -->
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="0,0,0,20">
-            <TextBlock Grid.Column="0" 
-                       Text="Jungholm Instruments" 
-                       FontSize="24" 
-                       FontWeight="Bold"
-                       VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="0" Orientation="Vertical">
+                <TextBlock Text="Jungholm Instruments" 
+                           FontSize="24" 
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding TimezoneDisplay}" 
+                           FontSize="10" 
+                           Foreground="Gray"
+                           Margin="0,2,0,0"/>
+            </StackPanel>
             
             <!-- View Toggle Button -->
             <Button Grid.Column="1"
@@ -57,354 +64,25 @@
 
         <!-- Calendar Content -->
         <Grid Grid.Row="1">
-            <!-- Week View -->
-            <Grid IsVisible="{Binding IsWeekView}" RowDefinitions="Auto,Auto,*">
-                <!-- Week Header -->
-                <TextBlock Grid.Row="0"
-                           Text="{Binding WeekHeaderText}"
-                           FontSize="18"
-                           FontWeight="SemiBold"
-                           Margin="0,0,0,15"/>
-                
-                <!-- Day Headers Row -->
-                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,*,*,*,*,*,*" Margin="5,0">
-                    <TextBlock Grid.Column="0" Text="" Width="60"/> <!-- Spacer for time column -->
-                    <TextBlock Grid.Column="1" Text="{Binding WeekDays[0].DayOfWeek}" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
-                    <TextBlock Grid.Column="2" Text="{Binding WeekDays[1].DayOfWeek}" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
-                    <TextBlock Grid.Column="3" Text="{Binding WeekDays[2].DayOfWeek}" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
-                    <TextBlock Grid.Column="4" Text="{Binding WeekDays[3].DayOfWeek}" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
-                    <TextBlock Grid.Column="5" Text="{Binding WeekDays[4].DayOfWeek}" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
-                    <TextBlock Grid.Column="6" Text="{Binding WeekDays[5].DayOfWeek}" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
-                    <TextBlock Grid.Column="7" Text="{Binding WeekDays[6].DayOfWeek}" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
-                </Grid>
-                
-                <!-- Date Headers Row -->
-                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,*,*,*,*,*,*" Margin="5,25,5,0">
-                    <TextBlock Grid.Column="0" Text="" Width="60"/>
-                    <TextBlock Grid.Column="1" Text="{Binding WeekDays[0].Day}" FontSize="12" HorizontalAlignment="Center" Foreground="Gray"/>
-                    <TextBlock Grid.Column="2" Text="{Binding WeekDays[1].Day}" FontSize="12" HorizontalAlignment="Center" Foreground="Gray"/>
-                    <TextBlock Grid.Column="3" Text="{Binding WeekDays[2].Day}" FontSize="12" HorizontalAlignment="Center" Foreground="Gray"/>
-                    <TextBlock Grid.Column="4" Text="{Binding WeekDays[3].Day}" FontSize="12" HorizontalAlignment="Center" Foreground="Gray"/>
-                    <TextBlock Grid.Column="5" Text="{Binding WeekDays[4].Day}" FontSize="12" HorizontalAlignment="Center" Foreground="Gray"/>
-                    <TextBlock Grid.Column="6" Text="{Binding WeekDays[5].Day}" FontSize="12" HorizontalAlignment="Center" Foreground="Gray"/>
-                    <TextBlock Grid.Column="7" Text="{Binding WeekDays[6].Day}" FontSize="12" HorizontalAlignment="Center" Foreground="Gray"/>
-                </Grid>
-                
-                <!-- Time-based Calendar Grid -->
-                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <Grid ColumnDefinitions="Auto,*,*,*,*,*,*,*" RowDefinitions="Auto">
-                        <!-- Time Column -->
-                        <Grid Grid.Column="0" Width="60" Margin="0,0,10,0">
-                            <ItemsControl ItemsSource="{Binding TimeSlots}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Height="60" BorderBrush="LightGray" BorderThickness="0,0,1,1">
-                                            <TextBlock Text="{Binding DisplayTime}" 
-                                                       FontSize="10" 
-                                                       Margin="5,0"
-                                                       VerticalAlignment="Top"
-                                                       Foreground="Gray"/>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </Grid>
-                        
-                        <!-- Day Columns with Time Slots and Bookings -->
-                        <!-- Monday -->
-                        <Grid Grid.Column="1" Margin="0,0,5,0">
-                            <Grid Height="1440"> <!-- 24 hours * 60 minutes -->
-                                <!-- Time slot grid lines -->
-                                <ItemsControl ItemsSource="{Binding TimeSlots}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Height="60" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Margin="0,0,0,0"/>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                
-                                <!-- Bookings positioned by time -->
-                                <Canvas>
-                                    <ItemsControl ItemsSource="{Binding WeekDays[0].Bookings}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Background="#4A90E2"
-                                                        CornerRadius="3"
-                                                        Padding="5"
-                                                        Canvas.Left="2"
-                                                        Canvas.Top="{Binding TopPosition}"
-                                                        Height="{Binding Height}"
-                                                        MinWidth="50">
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding InstrumentName}"
-                                                                   Foreground="White"
-                                                                   FontWeight="SemiBold"
-                                                                   FontSize="10"
-                                                                   TextWrapping="Wrap"/>
-                                                        <TextBlock Text="{Binding StartTime, StringFormat='{}{0:HH:mm}'}"
-                                                                   Foreground="White"
-                                                                   FontSize="8"
-                                                                   Margin="0,2,0,0"/>
-                                                    </StackPanel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Canvas>
-                            </Grid>
-                        </Grid>
-                        
-                        <!-- Tuesday -->
-                        <Grid Grid.Column="2" Margin="0,0,5,0">
-                            <Grid Height="1440">
-                                <ItemsControl ItemsSource="{Binding TimeSlots}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Height="60" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1"/>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <Canvas>
-                                    <ItemsControl ItemsSource="{Binding WeekDays[1].Bookings}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Background="#4A90E2"
-                                                        CornerRadius="3"
-                                                        Padding="5"
-                                                        Canvas.Left="2"
-                                                        Canvas.Top="{Binding TopPosition}"
-                                                        Height="{Binding Height}"
-                                                        MinWidth="50">
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding InstrumentName}"
-                                                                   Foreground="White"
-                                                                   FontWeight="SemiBold"
-                                                                   FontSize="10"
-                                                                   TextWrapping="Wrap"/>
-                                                        <TextBlock Text="{Binding StartTime, StringFormat='{}{0:HH:mm}'}"
-                                                                   Foreground="White"
-                                                                   FontSize="8"
-                                                                   Margin="0,2,0,0"/>
-                                                    </StackPanel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Canvas>
-                            </Grid>
-                        </Grid>
-                        
-                        <!-- Wednesday -->
-                        <Grid Grid.Column="3" Margin="0,0,5,0">
-                            <Grid Height="1440">
-                                <ItemsControl ItemsSource="{Binding TimeSlots}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Height="60" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1"/>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <Canvas>
-                                    <ItemsControl ItemsSource="{Binding WeekDays[2].Bookings}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Background="#4A90E2"
-                                                        CornerRadius="3"
-                                                        Padding="5"
-                                                        Canvas.Left="2"
-                                                        Canvas.Top="{Binding TopPosition}"
-                                                        Height="{Binding Height}"
-                                                        MinWidth="50">
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding InstrumentName}"
-                                                                   Foreground="White"
-                                                                   FontWeight="SemiBold"
-                                                                   FontSize="10"
-                                                                   TextWrapping="Wrap"/>
-                                                        <TextBlock Text="{Binding StartTime, StringFormat='{}{0:HH:mm}'}"
-                                                                   Foreground="White"
-                                                                   FontSize="8"
-                                                                   Margin="0,2,0,0"/>
-                                                    </StackPanel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Canvas>
-                            </Grid>
-                        </Grid>
-                        
-                        <!-- Thursday -->
-                        <Grid Grid.Column="4" Margin="0,0,5,0">
-                            <Grid Height="1440">
-                                <ItemsControl ItemsSource="{Binding TimeSlots}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Height="60" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1"/>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <Canvas>
-                                    <ItemsControl ItemsSource="{Binding WeekDays[3].Bookings}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Background="#4A90E2"
-                                                        CornerRadius="3"
-                                                        Padding="5"
-                                                        Canvas.Left="2"
-                                                        Canvas.Top="{Binding TopPosition}"
-                                                        Height="{Binding Height}"
-                                                        MinWidth="50">
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding InstrumentName}"
-                                                                   Foreground="White"
-                                                                   FontWeight="SemiBold"
-                                                                   FontSize="10"
-                                                                   TextWrapping="Wrap"/>
-                                                        <TextBlock Text="{Binding StartTime, StringFormat='{}{0:HH:mm}'}"
-                                                                   Foreground="White"
-                                                                   FontSize="8"
-                                                                   Margin="0,2,0,0"/>
-                                                    </StackPanel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Canvas>
-                            </Grid>
-                        </Grid>
-                        
-                        <!-- Friday -->
-                        <Grid Grid.Column="5" Margin="0,0,5,0">
-                            <Grid Height="1440">
-                                <ItemsControl ItemsSource="{Binding TimeSlots}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Height="60" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1"/>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <Canvas>
-                                    <ItemsControl ItemsSource="{Binding WeekDays[4].Bookings}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Background="#4A90E2"
-                                                        CornerRadius="3"
-                                                        Padding="5"
-                                                        Canvas.Left="2"
-                                                        Canvas.Top="{Binding TopPosition}"
-                                                        Height="{Binding Height}"
-                                                        MinWidth="50">
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding InstrumentName}"
-                                                                   Foreground="White"
-                                                                   FontWeight="SemiBold"
-                                                                   FontSize="10"
-                                                                   TextWrapping="Wrap"/>
-                                                        <TextBlock Text="{Binding StartTime, StringFormat='{}{0:HH:mm}'}"
-                                                                   Foreground="White"
-                                                                   FontSize="8"
-                                                                   Margin="0,2,0,0"/>
-                                                    </StackPanel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Canvas>
-                            </Grid>
-                        </Grid>
-                        
-                        <!-- Saturday -->
-                        <Grid Grid.Column="6" Margin="0,0,5,0">
-                            <Grid Height="1440">
-                                <ItemsControl ItemsSource="{Binding TimeSlots}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Height="60" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1"/>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <Canvas>
-                                    <ItemsControl ItemsSource="{Binding WeekDays[5].Bookings}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Background="#4A90E2"
-                                                        CornerRadius="3"
-                                                        Padding="5"
-                                                        Canvas.Left="2"
-                                                        Canvas.Top="{Binding TopPosition}"
-                                                        Height="{Binding Height}"
-                                                        MinWidth="50">
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding InstrumentName}"
-                                                                   Foreground="White"
-                                                                   FontWeight="SemiBold"
-                                                                   FontSize="10"
-                                                                   TextWrapping="Wrap"/>
-                                                        <TextBlock Text="{Binding StartTime, StringFormat='{}{0:HH:mm}'}"
-                                                                   Foreground="White"
-                                                                   FontSize="8"
-                                                                   Margin="0,2,0,0"/>
-                                                    </StackPanel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Canvas>
-                            </Grid>
-                        </Grid>
-                        
-                        <!-- Sunday -->
-                        <Grid Grid.Column="7" Margin="0,0,5,0">
-                            <Grid Height="1440">
-                                <ItemsControl ItemsSource="{Binding TimeSlots}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Height="60" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1"/>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <Canvas>
-                                    <ItemsControl ItemsSource="{Binding WeekDays[6].Bookings}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Background="#4A90E2"
-                                                        CornerRadius="3"
-                                                        Padding="5"
-                                                        Canvas.Left="2"
-                                                        Canvas.Top="{Binding TopPosition}"
-                                                        Height="{Binding Height}"
-                                                        MinWidth="50">
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding InstrumentName}"
-                                                                   Foreground="White"
-                                                                   FontWeight="SemiBold"
-                                                                   FontSize="10"
-                                                                   TextWrapping="Wrap"/>
-                                                        <TextBlock Text="{Binding StartTime, StringFormat='{}{0:HH:mm}'}"
-                                                                   Foreground="White"
-                                                                   FontSize="8"
-                                                                   Margin="0,2,0,0"/>
-                                                    </StackPanel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Canvas>
-                            </Grid>
-                        </Grid>
-                    </Grid>
-                </ScrollViewer>
-            </Grid>
+            <!-- Week View CalendarControl -->
+            <si:CalendarControl IsVisible="{Binding IsWeekView}"
+                               x:Name="WeekCalendar">
+                <si:CalendarControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:Booking">
+                        <si:AppointmentControl Begin="{Binding Begin}" 
+                                              End="{Binding End}" 
+                                              Text="{Binding Text}" />
+                    </DataTemplate>
+                </si:CalendarControl.ItemTemplate>
+            </si:CalendarControl>
 
             <!-- Month View -->
-            <Grid IsVisible="{Binding !IsWeekView}">
-                <Calendar SelectedDate="{Binding SelectedDate}"
-                          DisplayDate="{Binding DisplayedMonth}"
-                          SelectionMode="SingleDate"
-                          HorizontalAlignment="Stretch"
-                          VerticalAlignment="Stretch"/>
-            </Grid>
+            <Calendar IsVisible="{Binding !IsWeekView}"
+                     SelectedDate="{Binding SelectedDate}"
+                     DisplayDate="{Binding DisplayedMonth}"
+                     SelectionMode="SingleDate"
+                     HorizontalAlignment="Stretch"
+                     VerticalAlignment="Stretch"/>
         </Grid>
     </Grid>
-</Window> 
+</Window>

@@ -11,5 +11,6 @@
   
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://CalendarControl/Themes/Default.axaml" />
     </Application.Styles>
 </Application>

@@ -131,3 +131,4 @@ All exceptions are caught and logged. Check:
 - **Use Immediate Window** (Visual Studio) to evaluate expressions
 - **Check Supabase Dashboard** for server-side issues
 
+

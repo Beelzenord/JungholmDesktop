@@ -10,6 +10,7 @@ using Supabase.Postgrest.Models;
 using Supabase.Postgrest.Attributes;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using static JungholmInstrumentsDesktop.Services.TimezoneService;
 
 namespace JungholmInstrumentsDesktop.Services
 {
@@ -28,14 +29,18 @@ namespace JungholmInstrumentsDesktop.Services
             {
                 var weekEnd = weekStart.AddDays(7);
                 
-                Debug.WriteLine($"[BookingService] Fetching bookings from {weekStart:yyyy-MM-dd} to {weekEnd:yyyy-MM-dd}");
+                Debug.WriteLine($"[BookingService] Fetching bookings from {weekStart:yyyy-MM-dd} to {weekEnd:yyyy-MM-dd} (Swedish time)");
+                
+                // Convert Swedish time dates to UTC for querying Supabase
+                var weekStartUtc = ToUtc(weekStart.Date);
+                var weekEndUtc = ToUtc(weekEnd.Date);
                 
                 // Query bookings with joins to get product and user information
                 var response = await _supabase
                     .From<SupabaseBooking>()
                     .Select("id, user_id, product_id, start_time, end_time, notes, status, created_at, products(name), profiles(full_name, email)")
-                    .Filter("start_time", Supabase.Postgrest.Constants.Operator.GreaterThanOrEqual, weekStart.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))
-                    .Filter("start_time", Supabase.Postgrest.Constants.Operator.LessThan, weekEnd.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))
+                    .Filter("start_time", Supabase.Postgrest.Constants.Operator.GreaterThanOrEqual, weekStartUtc.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))
+                    .Filter("start_time", Supabase.Postgrest.Constants.Operator.LessThan, weekEndUtc.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))
                     .Order("start_time", Supabase.Postgrest.Constants.Ordering.Ascending)
                     .Get();
                 
@@ -55,18 +60,31 @@ namespace JungholmInstrumentsDesktop.Services
                                 UserId = item["user_id"]?.ToString() ?? string.Empty,
                                 ProductId = item["product_id"]?.ToString() ?? string.Empty,
                                 Notes = item["notes"]?.ToString(),
-                                CreatedAt = item["created_at"] != null ? DateTime.Parse(item["created_at"].ToString()).ToLocalTime() : DateTime.MinValue
+                                CreatedAt = item["created_at"] != null ? ToSwedishTime(DateTime.SpecifyKind(DateTime.Parse(item["created_at"]!.ToString()!), DateTimeKind.Utc)) : DateTime.MinValue
                             };
                             
-                            // Parse start_time and end_time
-                            if (item["start_time"] != null)
+                            // Parse start_time and end_time from UTC to Swedish timezone
+                            if (item["start_time"] != null && !string.IsNullOrEmpty(item["start_time"]?.ToString()))
                             {
-                                bookingModel.StartTime = DateTime.Parse(item["start_time"].ToString()).ToLocalTime();
+                                var utcStartTime = DateTime.Parse(item["start_time"]!.ToString()!);
+                                // Ensure it's treated as UTC
+                                if (utcStartTime.Kind != DateTimeKind.Utc)
+                                {
+                                    utcStartTime = DateTime.SpecifyKind(utcStartTime, DateTimeKind.Utc);
+                                }
+                                bookingModel.StartTime = ToSwedishTime(utcStartTime);
                             }
                             
-                            if (item["end_time"] != null)
+                            if (item["end_time"] != null && !string.IsNullOrEmpty(item["end_time"]?.ToString()))
                             {
-                                bookingModel.EndTime = DateTime.Parse(item["end_time"].ToString()).ToLocalTime();
+                                var utcEndTime = DateTime.Parse(item["end_time"]!.ToString()!);
+                                // Ensure it's treated as UTC
+                                if (utcEndTime.Kind != DateTimeKind.Utc)
+                                {
+                                    utcEndTime = DateTime.SpecifyKind(utcEndTime, DateTimeKind.Utc);
+                                }
+                                bookingModel.EndTime = ToSwedishTime(utcEndTime);
+                                Debug.WriteLine($"[BookingService] Parsed end_time: UTC={utcEndTime:yyyy-MM-dd HH:mm:ss} UTC -> Swedish={bookingModel.EndTime:yyyy-MM-dd HH:mm:ss}");
                             }
                             
                             // Extract product name
@@ -125,14 +143,18 @@ namespace JungholmInstrumentsDesktop.Services
             {
                 var monthEnd = monthStart.AddMonths(1);
                 
-                Debug.WriteLine($"[BookingService] Fetching bookings for month {monthStart:yyyy-MM}");
+                Debug.WriteLine($"[BookingService] Fetching bookings for month {monthStart:yyyy-MM} (Swedish time)");
+                
+                // Convert Swedish time dates to UTC for querying Supabase
+                var monthStartUtc = ToUtc(new DateTime(monthStart.Year, monthStart.Month, 1));
+                var monthEndUtc = ToUtc(monthEnd);
                 
                 // Query bookings with joins to get product and user information
                 var response = await _supabase
                     .From<SupabaseBooking>()
                     .Select("id, user_id, product_id, start_time, end_time, notes, status, created_at, products(name), profiles(full_name, email)")
-                    .Filter("start_time", Supabase.Postgrest.Constants.Operator.GreaterThanOrEqual, monthStart.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))
-                    .Filter("start_time", Supabase.Postgrest.Constants.Operator.LessThan, monthEnd.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))
+                    .Filter("start_time", Supabase.Postgrest.Constants.Operator.GreaterThanOrEqual, monthStartUtc.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))
+                    .Filter("start_time", Supabase.Postgrest.Constants.Operator.LessThan, monthEndUtc.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))
                     .Order("start_time", Supabase.Postgrest.Constants.Ordering.Ascending)
                     .Get();
                 
@@ -152,18 +174,31 @@ namespace JungholmInstrumentsDesktop.Services
                                 UserId = item["user_id"]?.ToString() ?? string.Empty,
                                 ProductId = item["product_id"]?.ToString() ?? string.Empty,
                                 Notes = item["notes"]?.ToString(),
-                                CreatedAt = item["created_at"] != null ? DateTime.Parse(item["created_at"].ToString()).ToLocalTime() : DateTime.MinValue
+                                CreatedAt = item["created_at"] != null ? ToSwedishTime(DateTime.SpecifyKind(DateTime.Parse(item["created_at"]!.ToString()!), DateTimeKind.Utc)) : DateTime.MinValue
                             };
                             
-                            // Parse start_time and end_time
-                            if (item["start_time"] != null)
+                            // Parse start_time and end_time from UTC to Swedish timezone
+                            if (item["start_time"] != null && !string.IsNullOrEmpty(item["start_time"]?.ToString()))
                             {
-                                bookingModel.StartTime = DateTime.Parse(item["start_time"].ToString()).ToLocalTime();
+                                var utcStartTime = DateTime.Parse(item["start_time"]!.ToString()!);
+                                // Ensure it's treated as UTC
+                                if (utcStartTime.Kind != DateTimeKind.Utc)
+                                {
+                                    utcStartTime = DateTime.SpecifyKind(utcStartTime, DateTimeKind.Utc);
+                                }
+                                bookingModel.StartTime = ToSwedishTime(utcStartTime);
                             }
                             
-                            if (item["end_time"] != null)
+                            if (item["end_time"] != null && !string.IsNullOrEmpty(item["end_time"]?.ToString()))
                             {
-                                bookingModel.EndTime = DateTime.Parse(item["end_time"].ToString()).ToLocalTime();
+                                var utcEndTime = DateTime.Parse(item["end_time"]!.ToString()!);
+                                // Ensure it's treated as UTC
+                                if (utcEndTime.Kind != DateTimeKind.Utc)
+                                {
+                                    utcEndTime = DateTime.SpecifyKind(utcEndTime, DateTimeKind.Utc);
+                                }
+                                bookingModel.EndTime = ToSwedishTime(utcEndTime);
+                                Debug.WriteLine($"[BookingService] Parsed end_time: UTC={utcEndTime:yyyy-MM-dd HH:mm:ss} UTC -> Swedish={bookingModel.EndTime:yyyy-MM-dd HH:mm:ss}");
                             }
                             
                             // Extract product name

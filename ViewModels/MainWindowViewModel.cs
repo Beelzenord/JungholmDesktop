@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using JungholmInstrumentsDesktop.Models;
 using JungholmInstrumentsDesktop.Services;
+using static JungholmInstrumentsDesktop.Services.TimezoneService;
 
 namespace JungholmInstrumentsDesktop.ViewModels
 {
@@ -25,6 +26,8 @@ namespace JungholmInstrumentsDesktop.ViewModels
         private bool _isWeekView = true;
 
         public string ViewToggleText => IsWeekView ? "Month View" : "Week View";
+        
+        public string TimezoneDisplay => GetSwedishTimezoneDisplayName();
 
         [ObservableProperty]
         private ObservableCollection<Booking> _bookings = new();
@@ -71,7 +74,7 @@ namespace JungholmInstrumentsDesktop.ViewModels
         private void InitializeWeekDays()
         {
             var startOfWeek = GetStartOfWeek(SelectedDate);
-
+ 
             // Build the full list first to avoid UI observing an in-flight empty collection
             var list = new List<WeekDayViewModel>(7);
             for (int i = 0; i < 7; i++)
@@ -83,11 +86,18 @@ namespace JungholmInstrumentsDesktop.ViewModels
                     GetBookingsFunc = GetBookingsForDate
                 });
             }
-
+ 
             // Replace the ObservableCollection in one step so bindings never see an emptied collection
             WeekDays = new System.Collections.ObjectModel.ObservableCollection<WeekDayViewModel>(list);
-
+ 
             OnPropertyChanged(nameof(WeekHeaderText));
+            
+            // Recalculate positions for all bookings on all week days
+            foreach (var weekDay in WeekDays)
+            {
+                var dayBookings = GetBookingsForDate(weekDay.Date);
+                // Positions are calculated inside GetBookingsForDate
+            }
         }
 
         private DateTime GetStartOfWeek(DateTime date)
@@ -117,26 +127,16 @@ namespace JungholmInstrumentsDesktop.ViewModels
                 Bookings.Clear();
                 foreach (var booking in bookings)
                 {
-                    // Calculate position for each booking based on its day
-                    if (IsWeekView)
-                    {
-                        var bookingDate = booking.StartTime.Date;
-                        booking.CalculatePosition(bookingDate);
-                    }
                     Bookings.Add(booking);
                 }
                 
-                // Refresh week days to update their bookings
+                // Refresh week days to update their bookings and calculate positions
                 if (IsWeekView)
                 {
                     foreach (var weekDay in WeekDays)
                     {
-                        // Recalculate positions for bookings on each day
+                        // Get bookings for this day (positions are calculated inside GetBookingsForDate)
                         var dayBookings = GetBookingsForDate(weekDay.Date);
-                        foreach (var booking in dayBookings)
-                        {
-                            booking.CalculatePosition(weekDay.Date);
-                        }
                         weekDay.RefreshBookings();
                     }
                 }
@@ -202,11 +202,34 @@ namespace JungholmInstrumentsDesktop.ViewModels
 
         public List<Booking> GetBookingsForDate(DateTime date)
         {
+            // Normalize dates to compare only the date part (Swedish timezone)
+            var targetDate = date.Date;
+            
+            // Filter bookings that overlap with this date
+            // A booking overlaps if:
+            // - It starts on or before this day AND ends on or after this day
             var bookings = Bookings
-                .Where(b => b.StartTime.Date <= date.Date && b.EndTime.Date >= date.Date)
+                .Where(b => 
+                {
+                    var bookingStartDate = b.StartTime.Date;
+                    var bookingEndDate = b.EndTime.Date;
+                    
+                    // Booking overlaps if it starts before/on this day and ends on/after this day
+                    bool overlaps = bookingStartDate <= targetDate && bookingEndDate >= targetDate;
+                    
+                    if (overlaps)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[GetBookingsForDate] Booking {b.InstrumentName} overlaps with {targetDate:yyyy-MM-dd}: Start={bookingStartDate:yyyy-MM-dd}, End={bookingEndDate:yyyy-MM-dd}");
+                    }
+                    
+                    return overlaps;
+                })
                 .ToList();
             
-            // Calculate position for each booking
+            System.Diagnostics.Debug.WriteLine($"[GetBookingsForDate] Found {bookings.Count} bookings for {targetDate:yyyy-MM-dd}");
+            
+            // Calculate position for each booking relative to this specific day
+            // This ensures multi-day bookings are positioned correctly on each day
             foreach (var booking in bookings)
             {
                 booking.CalculatePosition(date);
